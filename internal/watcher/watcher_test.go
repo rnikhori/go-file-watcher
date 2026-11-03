@@ -10,7 +10,7 @@ import (
 func TestNewWatchesCreatedFile(t *testing.T) {
 	dir := t.TempDir()
 
-	w, err := New(dir)
+	w, err := New(Options{Root: dir})
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
@@ -40,7 +40,7 @@ func TestAddRecursiveWatchesSubdirectories(t *testing.T) {
 		t.Fatalf("Mkdir: %v", err)
 	}
 
-	w, err := New(dir)
+	w, err := New(Options{Root: dir})
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}

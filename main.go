@@ -19,7 +19,7 @@ func main() {
 		root = os.Args[1]
 	}
 
-	w, err := watcher.New(root)
+	w, err := watcher.New(watcher.Options{Root: root})
 	if err != nil {
 		log.Fatalf("%v", err)
 	}

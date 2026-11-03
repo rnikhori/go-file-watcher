@@ -8,18 +8,30 @@ import (
 	"path/filepath"
 
 	"github.com/fsnotify/fsnotify"
+
+	"github.com/rnikhori/go-file-watcher/internal/ignore"
 )
+
+// Options configures a Watcher.
+type Options struct {
+	// Root is the directory to watch recursively.
+	Root string
+	// Ignore, if non-nil, excludes matching paths from being watched and
+	// reported.
+	Ignore *ignore.Matcher
+}
 
 // Watcher recursively watches a root directory for filesystem events.
 type Watcher struct {
-	fsw  *fsnotify.Watcher
-	root string
+	fsw     *fsnotify.Watcher
+	root    string
+	ignored *ignore.Matcher
 }
 
-// New creates a Watcher rooted at root and adds watches for root and all of
-// its subdirectories.
-func New(root string) (*Watcher, error) {
-	absRoot, err := filepath.Abs(root)
+// New creates a Watcher rooted at opts.Root and adds watches for the root
+// and all of its subdirectories, skipping any that match opts.Ignore.
+func New(opts Options) (*Watcher, error) {
+	absRoot, err := filepath.Abs(opts.Root)
 	if err != nil {
 		return nil, fmt.Errorf("resolving path: %w", err)
 	}
@@ -29,7 +41,7 @@ func New(root string) (*Watcher, error) {
 		return nil, fmt.Errorf("creating watcher: %w", err)
 	}
 
-	w := &Watcher{fsw: fsw, root: absRoot}
+	w := &Watcher{fsw: fsw, root: absRoot, ignored: opts.Ignore}
 	if err := w.addRecursive(absRoot); err != nil {
 		fsw.Close()
 		return nil, fmt.Errorf("watching %s: %w", absRoot, err)
@@ -63,10 +75,26 @@ func (w *Watcher) addRecursive(root string) error {
 			return err
 		}
 		if info.IsDir() {
+			if path != w.root && w.IsIgnored(path) {
+				return filepath.SkipDir
+			}
 			return w.fsw.Add(path)
 		}
 		return nil
 	})
+}
+
+// IsIgnored reports whether path matches the configured ignore patterns,
+// relative to the watcher's root.
+func (w *Watcher) IsIgnored(path string) bool {
+	if w.ignored == nil {
+		return false
+	}
+	rel, err := filepath.Rel(w.root, path)
+	if err != nil {
+		rel = path
+	}
+	return w.ignored.Match(rel)
 }
 
 // AddRecursive adds watches for dir and every subdirectory beneath it. It is
