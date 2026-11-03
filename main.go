@@ -1,6 +1,8 @@
 package main
 
 import (
+	"errors"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -21,6 +23,9 @@ import (
 func main() {
 	cfg, err := config.Parse(os.Args[1:])
 	if err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			os.Exit(0)
+		}
 		log.Fatalf("%v", err)
 	}
 

@@ -4,9 +4,26 @@ package config
 
 import (
 	"flag"
+	"fmt"
 	"strings"
 	"time"
 )
+
+const usageHeader = `go-file-watcher recursively watches a directory for filesystem changes.
+
+Usage:
+  file-watcher [flags] [path]
+
+If path is omitted, the current directory is watched.
+
+Examples:
+  file-watcher .
+  file-watcher --ignore='*.log,node_modules' --ext=.go,.txt /path/to/project
+  file-watcher --json --once /path/to/project
+  file-watcher --debounce=300ms --summary /path/to/project
+
+Flags:
+`
 
 // Config holds the parsed CLI options for a single run.
 type Config struct {
@@ -36,6 +53,10 @@ type Config struct {
 // Parse parses args (typically os.Args[1:]) into a Config.
 func Parse(args []string) (*Config, error) {
 	fs := flag.NewFlagSet("file-watcher", flag.ContinueOnError)
+	fs.Usage = func() {
+		fmt.Fprint(fs.Output(), usageHeader)
+		fs.PrintDefaults()
+	}
 
 	ignoreFlag := fs.String("ignore", "", "comma-separated glob patterns to exclude from watching and reporting")
 	ignoreFile := fs.String("ignore-file", ".watchignore", "gitignore-style file (relative to the watched root) with additional ignore patterns")
