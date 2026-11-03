@@ -10,6 +10,7 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 
+	"github.com/rnikhori/go-file-watcher/internal/debounce"
 	"github.com/rnikhori/go-file-watcher/internal/extfilter"
 	"github.com/rnikhori/go-file-watcher/internal/output"
 	"github.com/rnikhori/go-file-watcher/internal/watcher"
@@ -21,6 +22,9 @@ type Runner struct {
 	Watcher   *watcher.Watcher
 	Ext       *extfilter.Filter
 	Formatter output.Formatter
+	// Debounce, if non-nil, coalesces rapid repeated events for the same
+	// path within its window into a single reported event.
+	Debounce *debounce.Coalescer
 }
 
 // HandleEvent applies ignore/extension filtering to a single fsnotify event,
@@ -43,6 +47,10 @@ func (r *Runner) HandleEvent(event fsnotify.Event, now time.Time) bool {
 	}
 
 	if !isDir && !r.Ext.Match(event.Name) {
+		return false
+	}
+
+	if r.Debounce != nil && !r.Debounce.Allow(event.Name, now) {
 		return false
 	}
 

@@ -10,6 +10,7 @@ import (
 
 	"github.com/rnikhori/go-file-watcher/internal/app"
 	"github.com/rnikhori/go-file-watcher/internal/config"
+	"github.com/rnikhori/go-file-watcher/internal/debounce"
 	"github.com/rnikhori/go-file-watcher/internal/extfilter"
 	"github.com/rnikhori/go-file-watcher/internal/ignore"
 	"github.com/rnikhori/go-file-watcher/internal/output"
@@ -45,10 +46,16 @@ func main() {
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
 
+	var debouncer *debounce.Coalescer
+	if cfg.Debounce > 0 {
+		debouncer = debounce.New(cfg.Debounce)
+	}
+
 	runner := &app.Runner{
 		Watcher:   w,
 		Ext:       extfilter.New(cfg.Ext),
 		Formatter: formatter,
+		Debounce:  debouncer,
 	}
 	runner.Run(sigCh)
 
