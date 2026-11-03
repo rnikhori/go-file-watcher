@@ -21,6 +21,8 @@ type Config struct {
 	// Ext restricts reported events to files with these extensions. An
 	// empty slice means no restriction.
 	Ext []string
+	// JSON selects line-delimited JSON output instead of plain text.
+	JSON bool
 }
 
 // Parse parses args (typically os.Args[1:]) into a Config.
@@ -30,6 +32,7 @@ func Parse(args []string) (*Config, error) {
 	ignoreFlag := fs.String("ignore", "", "comma-separated glob patterns to exclude from watching and reporting")
 	ignoreFile := fs.String("ignore-file", ".watchignore", "gitignore-style file (relative to the watched root) with additional ignore patterns")
 	extFlag := fs.String("ext", "", "comma-separated file extensions to report (e.g. .go,.txt); all files reported if empty")
+	jsonFlag := fs.Bool("json", false, "emit one JSON object per line instead of plain text")
 
 	if err := fs.Parse(args); err != nil {
 		return nil, err
@@ -43,6 +46,7 @@ func Parse(args []string) (*Config, error) {
 	cfg := &Config{
 		Root:       root,
 		IgnoreFile: *ignoreFile,
+		JSON:       *jsonFlag,
 	}
 	if strings.TrimSpace(*ignoreFlag) != "" {
 		for _, p := range strings.Split(*ignoreFlag, ",") {

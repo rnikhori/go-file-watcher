@@ -53,6 +53,24 @@ func TestParseExtFlag(t *testing.T) {
 	}
 }
 
+func TestParseJSONFlag(t *testing.T) {
+	cfg, err := Parse([]string{"--json"})
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if !cfg.JSON {
+		t.Error("JSON = false, want true")
+	}
+
+	cfg, err = Parse(nil)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if cfg.JSON {
+		t.Error("JSON = true by default, want false")
+	}
+}
+
 func TestParseInvalidFlag(t *testing.T) {
 	if _, err := Parse([]string{"--not-a-real-flag"}); err == nil {
 		t.Fatal("expected error for unknown flag")
