@@ -2,6 +2,18 @@
 
 A CLI that recursively watches a directory for file system changes and prints each event with a timestamp.
 
+## Contents
+
+- [Build & run](#build--run)
+- [Build a binary](#build-a-binary)
+- [Ignoring paths](#ignoring-paths)
+- [Filtering by extension](#filtering-by-extension)
+- [JSON output](#json-output)
+- [Debouncing rapid events](#debouncing-rapid-events)
+- [Exiting after the first event](#exiting-after-the-first-event)
+- [Summary on exit](#summary-on-exit)
+- [Flags reference](#flags-reference)
+
 ## Build & run
 
 ```sh
@@ -114,3 +126,18 @@ go run . --summary /path/to/dir
 
 The summary is written to stderr, same as the startup banner and
 shutdown message.
+
+## Flags reference
+
+| Flag | Default | Description |
+| --- | --- | --- |
+| `--ignore` | *(none)* | Comma-separated glob patterns to exclude from watching and reporting. |
+| `--ignore-file` | `.watchignore` | Gitignore-style file (relative to the watched root) with additional ignore patterns. |
+| `--ext` | *(all)* | Comma-separated file extensions to report, e.g. `.go,.txt`. |
+| `--json` | `false` | Emit one JSON object per line instead of plain text. |
+| `--debounce` | `0` (disabled) | Coalesce repeated events for the same path within this window into one, e.g. `300ms`. |
+| `--once` | `false` | Exit after the first matching event is reported. |
+| `--summary` | `false` | Print a count of events by operation type on exit. |
+
+Run `file-watcher --help` (or `go run . --help`) to see this list along
+with a few example invocations.
