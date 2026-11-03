@@ -7,10 +7,8 @@ import (
 	"os/signal"
 	"path/filepath"
 	"syscall"
-	"time"
 
-	"github.com/fsnotify/fsnotify"
-
+	"github.com/rnikhori/go-file-watcher/internal/app"
 	"github.com/rnikhori/go-file-watcher/internal/config"
 	"github.com/rnikhori/go-file-watcher/internal/extfilter"
 	"github.com/rnikhori/go-file-watcher/internal/ignore"
@@ -28,7 +26,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("loading ignore file: %v", err)
 	}
-	extMatcher := extfilter.New(cfg.Ext)
 
 	var formatter output.Formatter
 	if cfg.JSON {
@@ -48,23 +45,14 @@ func main() {
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
 
-	for {
-		select {
-		case event, ok := <-w.Events():
-			if !ok {
-				return
-			}
-			handleEvent(w, event, extMatcher, formatter)
-		case err, ok := <-w.Errors():
-			if !ok {
-				return
-			}
-			log.Printf("watcher error: %v", err)
-		case <-sigCh:
-			fmt.Fprintln(os.Stderr, "\nstopping watcher")
-			return
-		}
+	runner := &app.Runner{
+		Watcher:   w,
+		Ext:       extfilter.New(cfg.Ext),
+		Formatter: formatter,
 	}
+	runner.Run(sigCh)
+
+	fmt.Fprintln(os.Stderr, "\nstopping watcher")
 }
 
 func buildIgnoreMatcher(cfg *config.Config) (*ignore.Matcher, error) {
@@ -81,28 +69,4 @@ func buildIgnoreMatcher(cfg *config.Config) (*ignore.Matcher, error) {
 	patterns = append(patterns, filePatterns...)
 
 	return ignore.New(patterns), nil
-}
-
-func handleEvent(w *watcher.Watcher, event fsnotify.Event, ext *extfilter.Filter, formatter output.Formatter) {
-	if w.IsIgnored(event.Name) {
-		return
-	}
-
-	isDir := false
-	if event.Op&fsnotify.Create != 0 {
-		if info, err := os.Stat(event.Name); err == nil && info.IsDir() {
-			isDir = true
-			if err := w.AddRecursive(event.Name); err != nil {
-				log.Printf("watching new dir %s: %v", event.Name, err)
-			}
-		}
-	}
-
-	if !isDir && !ext.Match(event.Name) {
-		return
-	}
-
-	if err := formatter.Write(event, time.Now()); err != nil {
-		log.Printf("writing event: %v", err)
-	}
 }
