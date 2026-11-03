@@ -158,6 +158,41 @@ func TestHandleEventRemovesWatchForDeletedSubdirectory(t *testing.T) {
 	}
 }
 
+func TestRunOnceExitsAfterFirstMatchingEvent(t *testing.T) {
+	dir := t.TempDir()
+	r, buf := newTestRunner(t, dir, nil, []string{".go"})
+	r.Once = true
+
+	done := make(chan struct{})
+	go func() {
+		r.Run(make(chan os.Signal))
+		close(done)
+	}()
+
+	if err := os.WriteFile(filepath.Join(dir, "skip.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	time.Sleep(50 * time.Millisecond)
+
+	target := filepath.Join(dir, "match.go")
+	if err := os.WriteFile(target, []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("Run did not return after the first matching event")
+	}
+
+	if !bytes.Contains(buf.Bytes(), []byte("match.go")) {
+		t.Errorf("expected output to contain the matching event, got %q", buf.String())
+	}
+	if bytes.Contains(buf.Bytes(), []byte("skip.txt")) {
+		t.Errorf("expected non-matching event to be filtered out, got %q", buf.String())
+	}
+}
+
 func TestHandleEventAddsWatchForNewSubdirectory(t *testing.T) {
 	dir := t.TempDir()
 	r, _ := newTestRunner(t, dir, nil, nil)
