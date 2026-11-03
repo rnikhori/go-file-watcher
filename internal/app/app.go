@@ -25,6 +25,9 @@ type Runner struct {
 	// Debounce, if non-nil, coalesces rapid repeated events for the same
 	// path within its window into a single reported event.
 	Debounce *debounce.Coalescer
+	// Once, if true, makes Run return as soon as the first matching event
+	// (one that survives filtering) has been reported.
+	Once bool
 }
 
 // HandleEvent applies ignore/extension filtering to a single fsnotify event,
@@ -74,7 +77,10 @@ func (r *Runner) Run(stop <-chan os.Signal) {
 			if !ok {
 				return
 			}
-			r.HandleEvent(event, time.Now())
+			wrote := r.HandleEvent(event, time.Now())
+			if wrote && r.Once {
+				return
+			}
 		case err, ok := <-r.Watcher.Errors():
 			if !ok {
 				return
