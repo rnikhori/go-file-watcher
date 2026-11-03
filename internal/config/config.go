@@ -18,6 +18,9 @@ type Config struct {
 	// IgnoreFile is the path (relative to Root, unless absolute) of a
 	// gitignore-style file to load additional patterns from.
 	IgnoreFile string
+	// Ext restricts reported events to files with these extensions. An
+	// empty slice means no restriction.
+	Ext []string
 }
 
 // Parse parses args (typically os.Args[1:]) into a Config.
@@ -26,6 +29,7 @@ func Parse(args []string) (*Config, error) {
 
 	ignoreFlag := fs.String("ignore", "", "comma-separated glob patterns to exclude from watching and reporting")
 	ignoreFile := fs.String("ignore-file", ".watchignore", "gitignore-style file (relative to the watched root) with additional ignore patterns")
+	extFlag := fs.String("ext", "", "comma-separated file extensions to report (e.g. .go,.txt); all files reported if empty")
 
 	if err := fs.Parse(args); err != nil {
 		return nil, err
@@ -45,6 +49,14 @@ func Parse(args []string) (*Config, error) {
 			p = strings.TrimSpace(p)
 			if p != "" {
 				cfg.IgnorePatterns = append(cfg.IgnorePatterns, p)
+			}
+		}
+	}
+	if strings.TrimSpace(*extFlag) != "" {
+		for _, e := range strings.Split(*extFlag, ",") {
+			e = strings.TrimSpace(e)
+			if e != "" {
+				cfg.Ext = append(cfg.Ext, e)
 			}
 		}
 	}

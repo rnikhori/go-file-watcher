@@ -42,6 +42,17 @@ func TestParseIgnoreFlag(t *testing.T) {
 	}
 }
 
+func TestParseExtFlag(t *testing.T) {
+	cfg, err := Parse([]string{"--ext", ".go, .txt ,md"})
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	want := []string{".go", ".txt", "md"}
+	if !reflect.DeepEqual(cfg.Ext, want) {
+		t.Errorf("Ext = %v, want %v", cfg.Ext, want)
+	}
+}
+
 func TestParseInvalidFlag(t *testing.T) {
 	if _, err := Parse([]string{"--not-a-real-flag"}); err == nil {
 		t.Fatal("expected error for unknown flag")
