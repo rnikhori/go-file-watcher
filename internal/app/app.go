@@ -13,6 +13,7 @@ import (
 	"github.com/rnikhori/go-file-watcher/internal/debounce"
 	"github.com/rnikhori/go-file-watcher/internal/extfilter"
 	"github.com/rnikhori/go-file-watcher/internal/output"
+	"github.com/rnikhori/go-file-watcher/internal/summary"
 	"github.com/rnikhori/go-file-watcher/internal/watcher"
 )
 
@@ -28,6 +29,9 @@ type Runner struct {
 	// Once, if true, makes Run return as soon as the first matching event
 	// (one that survives filtering) has been reported.
 	Once bool
+	// Summary, if non-nil, is incremented with every event written through
+	// Formatter so callers can report totals by operation on exit.
+	Summary *summary.Counter
 }
 
 // HandleEvent applies ignore/extension filtering to a single fsnotify event,
@@ -64,6 +68,9 @@ func (r *Runner) HandleEvent(event fsnotify.Event, now time.Time) bool {
 
 	if err := r.Formatter.Write(event, now); err != nil {
 		log.Printf("writing event: %v", err)
+	}
+	if r.Summary != nil {
+		r.Summary.Add(event.Op)
 	}
 	return true
 }
