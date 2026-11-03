@@ -1,0 +1,52 @@
+// Package config parses command-line flags into a Config the rest of the
+// program can act on, keeping flag definitions out of main().
+package config
+
+import (
+	"flag"
+	"strings"
+)
+
+// Config holds the parsed CLI options for a single run.
+type Config struct {
+	// Root is the directory to watch, resolved from the first positional
+	// argument (defaults to the current directory).
+	Root string
+	// IgnorePatterns are glob patterns supplied via --ignore, in addition to
+	// whatever is loaded from an ignore file.
+	IgnorePatterns []string
+	// IgnoreFile is the path (relative to Root, unless absolute) of a
+	// gitignore-style file to load additional patterns from.
+	IgnoreFile string
+}
+
+// Parse parses args (typically os.Args[1:]) into a Config.
+func Parse(args []string) (*Config, error) {
+	fs := flag.NewFlagSet("file-watcher", flag.ContinueOnError)
+
+	ignoreFlag := fs.String("ignore", "", "comma-separated glob patterns to exclude from watching and reporting")
+	ignoreFile := fs.String("ignore-file", ".watchignore", "gitignore-style file (relative to the watched root) with additional ignore patterns")
+
+	if err := fs.Parse(args); err != nil {
+		return nil, err
+	}
+
+	root := "."
+	if fs.NArg() > 0 {
+		root = fs.Arg(0)
+	}
+
+	cfg := &Config{
+		Root:       root,
+		IgnoreFile: *ignoreFile,
+	}
+	if strings.TrimSpace(*ignoreFlag) != "" {
+		for _, p := range strings.Split(*ignoreFlag, ",") {
+			p = strings.TrimSpace(p)
+			if p != "" {
+				cfg.IgnorePatterns = append(cfg.IgnorePatterns, p)
+			}
+		}
+	}
+	return cfg, nil
+}
