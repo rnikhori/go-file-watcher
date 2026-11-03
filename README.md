@@ -74,3 +74,17 @@ go run . --json /path/to/dir
 The startup banner and shutdown message are written to stderr, so stdout
 carries only event output and can be piped directly into `jq` or similar
 tools.
+
+## Debouncing rapid events
+
+Editors and build tools often produce several events for a single logical
+save. Coalesce events for the same path within a window into one:
+
+```sh
+go run . --debounce=300ms /path/to/dir
+```
+
+The first event for a path is always reported immediately; subsequent
+events for that same path within the window are suppressed. The window
+resets from the last *reported* event, so a sustained burst still
+produces periodic output rather than being silenced indefinitely.
