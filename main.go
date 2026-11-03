@@ -12,6 +12,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 
 	"github.com/rnikhori/go-file-watcher/internal/config"
+	"github.com/rnikhori/go-file-watcher/internal/extfilter"
 	"github.com/rnikhori/go-file-watcher/internal/ignore"
 	"github.com/rnikhori/go-file-watcher/internal/watcher"
 )
@@ -26,6 +27,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("loading ignore file: %v", err)
 	}
+	extMatcher := extfilter.New(cfg.Ext)
 
 	w, err := watcher.New(watcher.Options{Root: cfg.Root, Ignore: ignoreMatcher})
 	if err != nil {
@@ -44,7 +46,7 @@ func main() {
 			if !ok {
 				return
 			}
-			handleEvent(w, event)
+			handleEvent(w, event, extMatcher)
 		case err, ok := <-w.Errors():
 			if !ok {
 				return
@@ -73,19 +75,24 @@ func buildIgnoreMatcher(cfg *config.Config) (*ignore.Matcher, error) {
 	return ignore.New(patterns), nil
 }
 
-func handleEvent(w *watcher.Watcher, event fsnotify.Event) {
+func handleEvent(w *watcher.Watcher, event fsnotify.Event, ext *extfilter.Filter) {
 	if w.IsIgnored(event.Name) {
 		return
 	}
 
-	fmt.Printf("[%s] %-7s %s\n", time.Now().Format("2006-01-02 15:04:05"), event.Op, event.Name)
-
+	isDir := false
 	if event.Op&fsnotify.Create != 0 {
-		info, err := os.Stat(event.Name)
-		if err == nil && info.IsDir() {
+		if info, err := os.Stat(event.Name); err == nil && info.IsDir() {
+			isDir = true
 			if err := w.AddRecursive(event.Name); err != nil {
 				log.Printf("watching new dir %s: %v", event.Name, err)
 			}
 		}
 	}
+
+	if !isDir && !ext.Match(event.Name) {
+		return
+	}
+
+	fmt.Printf("[%s] %-7s %s\n", time.Now().Format("2006-01-02 15:04:05"), event.Op, event.Name)
 }
