@@ -3,6 +3,8 @@
 package ignore
 
 import (
+	"bufio"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -55,6 +57,29 @@ func (m *Matcher) Match(relPath string) bool {
 		}
 	}
 	return false
+}
+
+// LoadFile reads newline-separated glob patterns from a .watchignore-style
+// file. A missing file is not an error; it simply yields no patterns.
+func LoadFile(path string) ([]string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	defer f.Close()
+
+	var patterns []string
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		patterns = append(patterns, scanner.Text())
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	return patterns, nil
 }
 
 // Patterns returns the normalized patterns held by the matcher.
