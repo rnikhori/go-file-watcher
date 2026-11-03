@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/fsnotify/fsnotify"
 
@@ -24,9 +25,11 @@ type Options struct {
 
 // Watcher recursively watches a root directory for filesystem events.
 type Watcher struct {
-	fsw     *fsnotify.Watcher
-	root    string
-	ignored *ignore.Matcher
+	fsw       *fsnotify.Watcher
+	root      string
+	ignored   *ignore.Matcher
+	closeOnce sync.Once
+	closeErr  error
 }
 
 // New creates a Watcher rooted at opts.Root and adds watches for the root
@@ -55,9 +58,14 @@ func (w *Watcher) Root() string {
 	return w.root
 }
 
-// Close releases the underlying fsnotify watcher.
+// Close releases the underlying fsnotify watcher. It is safe to call more
+// than once; only the first call actually closes the watcher, and every
+// call returns the same result.
 func (w *Watcher) Close() error {
-	return w.fsw.Close()
+	w.closeOnce.Do(func() {
+		w.closeErr = w.fsw.Close()
+	})
+	return w.closeErr
 }
 
 // Events exposes the underlying fsnotify event channel.
