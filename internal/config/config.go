@@ -29,6 +29,8 @@ type Config struct {
 	Debounce time.Duration
 	// Once, if true, exits after the first matching event is reported.
 	Once bool
+	// Summary, if true, prints a count of events by operation type on exit.
+	Summary bool
 }
 
 // Parse parses args (typically os.Args[1:]) into a Config.
@@ -41,6 +43,7 @@ func Parse(args []string) (*Config, error) {
 	jsonFlag := fs.Bool("json", false, "emit one JSON object per line instead of plain text")
 	debounceFlag := fs.Duration("debounce", 0, "coalesce repeated events for the same path within this window into one (e.g. 300ms)")
 	onceFlag := fs.Bool("once", false, "exit after the first matching event is reported")
+	summaryFlag := fs.Bool("summary", false, "print a count of events by operation type on exit")
 
 	if err := fs.Parse(args); err != nil {
 		return nil, err
@@ -57,6 +60,7 @@ func Parse(args []string) (*Config, error) {
 		JSON:       *jsonFlag,
 		Debounce:   *debounceFlag,
 		Once:       *onceFlag,
+		Summary:    *summaryFlag,
 	}
 	if strings.TrimSpace(*ignoreFlag) != "" {
 		for _, p := range strings.Split(*ignoreFlag, ",") {

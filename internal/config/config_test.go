@@ -100,6 +100,16 @@ func TestParseOnceFlag(t *testing.T) {
 	}
 }
 
+func TestParseSummaryFlag(t *testing.T) {
+	cfg, err := Parse([]string{"--summary"})
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if !cfg.Summary {
+		t.Error("Summary = false, want true")
+	}
+}
+
 func TestParseInvalidFlag(t *testing.T) {
 	if _, err := Parse([]string{"--not-a-real-flag"}); err == nil {
 		t.Fatal("expected error for unknown flag")
