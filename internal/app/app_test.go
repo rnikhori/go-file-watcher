@@ -9,6 +9,7 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 
+	"github.com/rnikhori/go-file-watcher/internal/debounce"
 	"github.com/rnikhori/go-file-watcher/internal/extfilter"
 	"github.com/rnikhori/go-file-watcher/internal/ignore"
 	"github.com/rnikhori/go-file-watcher/internal/output"
@@ -74,6 +75,34 @@ func TestHandleEventSuppressesNonMatchingExtension(t *testing.T) {
 	}
 	if buf.Len() != 0 {
 		t.Errorf("expected no output, got %q", buf.String())
+	}
+}
+
+func TestHandleEventDebounceCoalescesBurst(t *testing.T) {
+	dir := t.TempDir()
+	r, buf := newTestRunner(t, dir, nil, nil)
+	r.Debounce = debounce.New(100 * time.Millisecond)
+
+	target := filepath.Join(dir, "hot.txt")
+	base := time.Unix(0, 0)
+
+	wroteCount := 0
+	for i := 0; i < 5; i++ {
+		if r.HandleEvent(fsnotify.Event{Name: target, Op: fsnotify.Write}, base.Add(time.Duration(i)*10*time.Millisecond)) {
+			wroteCount++
+		}
+	}
+	if wroteCount != 1 {
+		t.Fatalf("expected a burst within the debounce window to produce 1 write, got %d", wroteCount)
+	}
+
+	if !r.HandleEvent(fsnotify.Event{Name: target, Op: fsnotify.Write}, base.Add(200*time.Millisecond)) {
+		t.Fatal("expected event after the debounce window to be written")
+	}
+
+	lines := bytes.Count(buf.Bytes(), []byte("\n"))
+	if lines != 2 {
+		t.Fatalf("expected 2 reported lines, got %d: %q", lines, buf.String())
 	}
 }
 
