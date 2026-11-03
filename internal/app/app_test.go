@@ -106,6 +106,58 @@ func TestHandleEventDebounceCoalescesBurst(t *testing.T) {
 	}
 }
 
+func TestHandleEventRemovesWatchForDeletedSubdirectory(t *testing.T) {
+	dir := t.TempDir()
+	sub := filepath.Join(dir, "sub")
+	if err := os.Mkdir(sub, 0o755); err != nil {
+		t.Fatalf("Mkdir: %v", err)
+	}
+
+	r, _ := newTestRunner(t, dir, nil, nil)
+
+	if err := os.RemoveAll(sub); err != nil {
+		t.Fatalf("RemoveAll: %v", err)
+	}
+
+	deadline := time.After(5 * time.Second)
+	var sawRemove bool
+	for !sawRemove {
+		select {
+		case ev := <-r.Watcher.Events():
+			if ev.Name == sub && ev.Op&fsnotify.Remove != 0 {
+				sawRemove = true
+				if !r.HandleEvent(ev, time.Now()) {
+					t.Fatal("expected remove event for watched dir to be written")
+				}
+			}
+		case err := <-r.Watcher.Errors():
+			t.Fatalf("unexpected watcher error after removing a watched subdirectory: %v", err)
+		case <-deadline:
+			t.Fatal("timed out waiting for remove event")
+		}
+	}
+
+	if err := r.Watcher.Remove(sub); err != nil {
+		t.Fatalf("Remove on an already-cleaned-up watch should be a no-op, got: %v", err)
+	}
+
+	control := filepath.Join(dir, "still-watching.txt")
+	if err := os.WriteFile(control, []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	select {
+	case ev := <-r.Watcher.Events():
+		if ev.Name != control {
+			t.Fatalf("got event for %s, want %s", ev.Name, control)
+		}
+	case err := <-r.Watcher.Errors():
+		t.Fatalf("unexpected watcher error: %v", err)
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for control event; watcher on root may be broken")
+	}
+}
+
 func TestHandleEventAddsWatchForNewSubdirectory(t *testing.T) {
 	dir := t.TempDir()
 	r, _ := newTestRunner(t, dir, nil, nil)
