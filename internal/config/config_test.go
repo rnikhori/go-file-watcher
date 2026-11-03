@@ -3,6 +3,7 @@ package config
 import (
 	"reflect"
 	"testing"
+	"time"
 )
 
 func TestParseDefaults(t *testing.T) {
@@ -68,6 +69,24 @@ func TestParseJSONFlag(t *testing.T) {
 	}
 	if cfg.JSON {
 		t.Error("JSON = true by default, want false")
+	}
+}
+
+func TestParseDebounceFlag(t *testing.T) {
+	cfg, err := Parse([]string{"--debounce", "250ms"})
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if cfg.Debounce != 250*time.Millisecond {
+		t.Errorf("Debounce = %v, want %v", cfg.Debounce, 250*time.Millisecond)
+	}
+
+	cfg, err = Parse(nil)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if cfg.Debounce != 0 {
+		t.Errorf("Debounce default = %v, want 0", cfg.Debounce)
 	}
 }
 

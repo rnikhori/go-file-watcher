@@ -5,6 +5,7 @@ package config
 import (
 	"flag"
 	"strings"
+	"time"
 )
 
 // Config holds the parsed CLI options for a single run.
@@ -23,6 +24,9 @@ type Config struct {
 	Ext []string
 	// JSON selects line-delimited JSON output instead of plain text.
 	JSON bool
+	// Debounce is the window within which repeated events for the same
+	// path are coalesced into one. Zero disables debouncing.
+	Debounce time.Duration
 }
 
 // Parse parses args (typically os.Args[1:]) into a Config.
@@ -33,6 +37,7 @@ func Parse(args []string) (*Config, error) {
 	ignoreFile := fs.String("ignore-file", ".watchignore", "gitignore-style file (relative to the watched root) with additional ignore patterns")
 	extFlag := fs.String("ext", "", "comma-separated file extensions to report (e.g. .go,.txt); all files reported if empty")
 	jsonFlag := fs.Bool("json", false, "emit one JSON object per line instead of plain text")
+	debounceFlag := fs.Duration("debounce", 0, "coalesce repeated events for the same path within this window into one (e.g. 300ms)")
 
 	if err := fs.Parse(args); err != nil {
 		return nil, err
@@ -47,6 +52,7 @@ func Parse(args []string) (*Config, error) {
 		Root:       root,
 		IgnoreFile: *ignoreFile,
 		JSON:       *jsonFlag,
+		Debounce:   *debounceFlag,
 	}
 	if strings.TrimSpace(*ignoreFlag) != "" {
 		for _, p := range strings.Split(*ignoreFlag, ",") {
