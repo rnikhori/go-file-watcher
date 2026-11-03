@@ -3,6 +3,7 @@
 package watcher
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -103,7 +104,13 @@ func (w *Watcher) AddRecursive(dir string) error {
 	return w.addRecursive(dir)
 }
 
-// Remove removes the watch on dir, if one exists.
+// Remove removes the watch on dir, if one exists. Removing a path that was
+// never watched (or whose watch was already cleaned up, e.g. by the kernel
+// when the directory itself was deleted) is not an error.
 func (w *Watcher) Remove(dir string) error {
-	return w.fsw.Remove(dir)
+	err := w.fsw.Remove(dir)
+	if errors.Is(err, fsnotify.ErrNonExistentWatch) {
+		return nil
+	}
+	return err
 }
