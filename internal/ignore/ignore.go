@@ -24,7 +24,16 @@ func New(patterns []string) *Matcher {
 		if p == "" || strings.HasPrefix(p, "#") {
 			continue
 		}
-		m.patterns = append(m.patterns, filepath.ToSlash(p))
+		p = filepath.ToSlash(p)
+		if len(p) > 1 && strings.HasSuffix(p, "/") {
+			// A trailing slash is the gitignore convention for "match
+			// directories only"; we don't distinguish files from
+			// directories here, so drop it rather than let the pattern
+			// silently never match (filepath.Match requires an exact
+			// trailing slash in the matched string too).
+			p = strings.TrimSuffix(p, "/")
+		}
+		m.patterns = append(m.patterns, p)
 	}
 	return m
 }

@@ -18,6 +18,8 @@ func TestMatch(t *testing.T) {
 		{"nested relative glob", []string{"build/*"}, "build/output.bin", true},
 		{"comment lines are ignored", []string{"# a comment", ""}, "foo.go", false},
 		{"whitespace-only pattern ignored", []string{"   "}, "", false},
+		{"trailing slash directory pattern matches at root", []string{"build/"}, "build/output.bin", true},
+		{"trailing slash directory pattern matches nested", []string{"cache/"}, "a/cache/file.txt", true},
 	}
 
 	for _, tc := range cases {
@@ -41,10 +43,10 @@ func TestMatchNilMatcher(t *testing.T) {
 	}
 }
 
-func TestPatternsNormalizesWhitespaceAndComments(t *testing.T) {
+func TestPatternsNormalizesWhitespaceCommentsAndTrailingSlash(t *testing.T) {
 	m := New([]string{" *.tmp ", "# skip me", "", "cache/"})
 	got := m.Patterns()
-	want := []string{"*.tmp", "cache/"}
+	want := []string{"*.tmp", "cache"}
 	if len(got) != len(want) {
 		t.Fatalf("Patterns() = %v, want %v", got, want)
 	}
