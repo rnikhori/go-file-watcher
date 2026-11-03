@@ -100,3 +100,17 @@ go run . --once --ext=.go /path/to/dir
 
 Combine with `--json` for a single machine-readable line describing
 whatever changed, then let the calling script decide what to do next.
+
+## Summary on exit
+
+Print a count of events by operation type when the watcher stops:
+
+```sh
+go run . --summary /path/to/dir
+# ^C
+# stopping watcher
+# summary: total=7 CREATE=3 REMOVE=1 WRITE=3
+```
+
+The summary is written to stderr, same as the startup banner and
+shutdown message.
