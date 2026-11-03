@@ -57,3 +57,20 @@ go run . --ext=.go,.txt /path/to/dir
 The leading dot is optional (`--ext=go,txt` also works) and matching is
 case-insensitive. Directory create/remove events are always processed
 (so new subdirectories keep getting watched) regardless of `--ext`.
+
+## JSON output
+
+For machine consumption, emit one JSON object per line instead of plain
+text:
+
+```sh
+go run . --json /path/to/dir
+```
+
+```json
+{"time":"2024-01-02T03:04:05Z","op":"CREATE","path":"/path/to/dir/foo.go"}
+```
+
+The startup banner and shutdown message are written to stderr, so stdout
+carries only event output and can be piped directly into `jq` or similar
+tools.
