@@ -45,3 +45,15 @@ Patterns are matched against the relative path, its basename, and each
 path segment, so `node_modules` excludes that directory anywhere in the
 tree, not just at the root. Use `--ignore-file` to point at a different
 file (relative to the watched root unless given as an absolute path).
+
+## Filtering by extension
+
+Only report events for files with specific extensions:
+
+```sh
+go run . --ext=.go,.txt /path/to/dir
+```
+
+The leading dot is optional (`--ext=go,txt` also works) and matching is
+case-insensitive. Directory create/remove events are always processed
+(so new subdirectories keep getting watched) regardless of `--ext`.
