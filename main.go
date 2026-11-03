@@ -43,7 +43,7 @@ func main() {
 	}
 	defer w.Close()
 
-	fmt.Printf("watching %s (recursive) — press Ctrl+C to stop\n", w.Root())
+	fmt.Fprintf(os.Stderr, "watching %s (recursive) — press Ctrl+C to stop\n", w.Root())
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
@@ -61,7 +61,7 @@ func main() {
 			}
 			log.Printf("watcher error: %v", err)
 		case <-sigCh:
-			fmt.Println("\nstopping watcher")
+			fmt.Fprintln(os.Stderr, "\nstopping watcher")
 			return
 		}
 	}
