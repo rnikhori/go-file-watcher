@@ -5,21 +5,29 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
 
+	"github.com/rnikhori/go-file-watcher/internal/config"
+	"github.com/rnikhori/go-file-watcher/internal/ignore"
 	"github.com/rnikhori/go-file-watcher/internal/watcher"
 )
 
 func main() {
-	root := "."
-	if len(os.Args) > 1 {
-		root = os.Args[1]
+	cfg, err := config.Parse(os.Args[1:])
+	if err != nil {
+		log.Fatalf("%v", err)
 	}
 
-	w, err := watcher.New(watcher.Options{Root: root})
+	ignoreMatcher, err := buildIgnoreMatcher(cfg)
+	if err != nil {
+		log.Fatalf("loading ignore file: %v", err)
+	}
+
+	w, err := watcher.New(watcher.Options{Root: cfg.Root, Ignore: ignoreMatcher})
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
@@ -49,7 +57,27 @@ func main() {
 	}
 }
 
+func buildIgnoreMatcher(cfg *config.Config) (*ignore.Matcher, error) {
+	patterns := append([]string(nil), cfg.IgnorePatterns...)
+
+	ignoreFilePath := cfg.IgnoreFile
+	if !filepath.IsAbs(ignoreFilePath) {
+		ignoreFilePath = filepath.Join(cfg.Root, ignoreFilePath)
+	}
+	filePatterns, err := ignore.LoadFile(ignoreFilePath)
+	if err != nil {
+		return nil, err
+	}
+	patterns = append(patterns, filePatterns...)
+
+	return ignore.New(patterns), nil
+}
+
 func handleEvent(w *watcher.Watcher, event fsnotify.Event) {
+	if w.IsIgnored(event.Name) {
+		return
+	}
+
 	fmt.Printf("[%s] %-7s %s\n", time.Now().Format("2006-01-02 15:04:05"), event.Op, event.Name)
 
 	if event.Op&fsnotify.Create != 0 {
