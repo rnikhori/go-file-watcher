@@ -1,7 +1,12 @@
 package config
 
 import (
+	"errors"
+	"flag"
+	"io"
+	"os"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 )
@@ -107,6 +112,37 @@ func TestParseSummaryFlag(t *testing.T) {
 	}
 	if !cfg.Summary {
 		t.Error("Summary = false, want true")
+	}
+}
+
+func TestParseHelpPrintsUsageAndExamples(t *testing.T) {
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("os.Pipe: %v", err)
+	}
+	origStderr := os.Stderr
+	os.Stderr = w
+	defer func() { os.Stderr = origStderr }()
+
+	_, parseErr := Parse([]string{"--help"})
+
+	w.Close()
+	os.Stderr = origStderr
+
+	out, err := io.ReadAll(r)
+	if err != nil {
+		t.Fatalf("reading captured output: %v", err)
+	}
+
+	if !errors.Is(parseErr, flag.ErrHelp) {
+		t.Fatalf("Parse(--help) error = %v, want flag.ErrHelp", parseErr)
+	}
+
+	got := string(out)
+	for _, want := range []string{"Usage:", "Examples:", "--ignore", "--debounce"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("usage output missing %q; got:\n%s", want, got)
+		}
 	}
 }
 
