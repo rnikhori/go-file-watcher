@@ -27,6 +27,8 @@ type Config struct {
 	// Debounce is the window within which repeated events for the same
 	// path are coalesced into one. Zero disables debouncing.
 	Debounce time.Duration
+	// Once, if true, exits after the first matching event is reported.
+	Once bool
 }
 
 // Parse parses args (typically os.Args[1:]) into a Config.
@@ -38,6 +40,7 @@ func Parse(args []string) (*Config, error) {
 	extFlag := fs.String("ext", "", "comma-separated file extensions to report (e.g. .go,.txt); all files reported if empty")
 	jsonFlag := fs.Bool("json", false, "emit one JSON object per line instead of plain text")
 	debounceFlag := fs.Duration("debounce", 0, "coalesce repeated events for the same path within this window into one (e.g. 300ms)")
+	onceFlag := fs.Bool("once", false, "exit after the first matching event is reported")
 
 	if err := fs.Parse(args); err != nil {
 		return nil, err
@@ -53,6 +56,7 @@ func Parse(args []string) (*Config, error) {
 		IgnoreFile: *ignoreFile,
 		JSON:       *jsonFlag,
 		Debounce:   *debounceFlag,
+		Once:       *onceFlag,
 	}
 	if strings.TrimSpace(*ignoreFlag) != "" {
 		for _, p := range strings.Split(*ignoreFlag, ",") {

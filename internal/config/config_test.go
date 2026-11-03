@@ -90,6 +90,16 @@ func TestParseDebounceFlag(t *testing.T) {
 	}
 }
 
+func TestParseOnceFlag(t *testing.T) {
+	cfg, err := Parse([]string{"--once"})
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if !cfg.Once {
+		t.Error("Once = false, want true")
+	}
+}
+
 func TestParseInvalidFlag(t *testing.T) {
 	if _, err := Parse([]string{"--not-a-real-flag"}); err == nil {
 		t.Fatal("expected error for unknown flag")

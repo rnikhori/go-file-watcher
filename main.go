@@ -56,6 +56,7 @@ func main() {
 		Ext:       extfilter.New(cfg.Ext),
 		Formatter: formatter,
 		Debounce:  debouncer,
+		Once:      cfg.Once,
 	}
 	runner.Run(sigCh)
 
