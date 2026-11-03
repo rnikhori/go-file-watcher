@@ -88,3 +88,15 @@ The first event for a path is always reported immediately; subsequent
 events for that same path within the window are suppressed. The window
 resets from the last *reported* event, so a sustained burst still
 produces periodic output rather than being silenced indefinitely.
+
+## Exiting after the first event
+
+For scripting or CI, watch until the first matching event (after any
+ignore/extension filtering) and then exit automatically:
+
+```sh
+go run . --once --ext=.go /path/to/dir
+```
+
+Combine with `--json` for a single machine-readable line describing
+whatever changed, then let the calling script decide what to do next.
