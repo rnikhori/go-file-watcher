@@ -47,21 +47,38 @@ func TestCLIOnceJSONEndToEnd(t *testing.T) {
 		t.Fatalf("starting command: %v", err)
 	}
 
-	time.Sleep(1 * time.Second)
 	target := filepath.Join(dir, "main.go")
-	if err := os.WriteFile(target, []byte("package main"), 0o644); err != nil {
-		t.Fatalf("WriteFile: %v", err)
-	}
 
 	done := make(chan error, 1)
 	go func() { done <- cmd.Wait() }()
 
+	// The watcher needs a moment to finish walking the directory and
+	// register with the OS before it will see events, and that delay is
+	// system-load dependent. Keep writing the target file until the
+	// process exits (because it finally saw the event) rather than
+	// gambling on a single fixed sleep.
+	stop := make(chan struct{})
+	go func() {
+		ticker := time.NewTicker(200 * time.Millisecond)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				_ = os.WriteFile(target, []byte("package main"), 0o644)
+			case <-stop:
+				return
+			}
+		}
+	}()
+
 	select {
 	case err := <-done:
+		close(stop)
 		if err != nil {
 			t.Fatalf("process exited with error: %v\nstderr: %s", err, stderr.String())
 		}
-	case <-time.After(10 * time.Second):
+	case <-time.After(15 * time.Second):
+		close(stop)
 		cmd.Process.Kill()
 		t.Fatalf("process did not exit after --once matched; stderr: %s", stderr.String())
 	}
