@@ -14,6 +14,7 @@ import (
 	"github.com/rnikhori/go-file-watcher/internal/extfilter"
 	"github.com/rnikhori/go-file-watcher/internal/ignore"
 	"github.com/rnikhori/go-file-watcher/internal/output"
+	"github.com/rnikhori/go-file-watcher/internal/summary"
 	"github.com/rnikhori/go-file-watcher/internal/watcher"
 )
 
@@ -51,16 +52,25 @@ func main() {
 		debouncer = debounce.New(cfg.Debounce)
 	}
 
+	var counter *summary.Counter
+	if cfg.Summary {
+		counter = summary.NewCounter()
+	}
+
 	runner := &app.Runner{
 		Watcher:   w,
 		Ext:       extfilter.New(cfg.Ext),
 		Formatter: formatter,
 		Debounce:  debouncer,
 		Once:      cfg.Once,
+		Summary:   counter,
 	}
 	runner.Run(sigCh)
 
 	fmt.Fprintln(os.Stderr, "\nstopping watcher")
+	if counter != nil {
+		fmt.Fprintf(os.Stderr, "summary: %s\n", counter)
+	}
 }
 
 func buildIgnoreMatcher(cfg *config.Config) (*ignore.Matcher, error) {
