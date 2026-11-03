@@ -14,6 +14,7 @@ import (
 	"github.com/rnikhori/go-file-watcher/internal/config"
 	"github.com/rnikhori/go-file-watcher/internal/extfilter"
 	"github.com/rnikhori/go-file-watcher/internal/ignore"
+	"github.com/rnikhori/go-file-watcher/internal/output"
 	"github.com/rnikhori/go-file-watcher/internal/watcher"
 )
 
@@ -28,6 +29,13 @@ func main() {
 		log.Fatalf("loading ignore file: %v", err)
 	}
 	extMatcher := extfilter.New(cfg.Ext)
+
+	var formatter output.Formatter
+	if cfg.JSON {
+		formatter = output.NewJSON(os.Stdout)
+	} else {
+		formatter = output.NewText(os.Stdout)
+	}
 
 	w, err := watcher.New(watcher.Options{Root: cfg.Root, Ignore: ignoreMatcher})
 	if err != nil {
@@ -46,7 +54,7 @@ func main() {
 			if !ok {
 				return
 			}
-			handleEvent(w, event, extMatcher)
+			handleEvent(w, event, extMatcher, formatter)
 		case err, ok := <-w.Errors():
 			if !ok {
 				return
@@ -75,7 +83,7 @@ func buildIgnoreMatcher(cfg *config.Config) (*ignore.Matcher, error) {
 	return ignore.New(patterns), nil
 }
 
-func handleEvent(w *watcher.Watcher, event fsnotify.Event, ext *extfilter.Filter) {
+func handleEvent(w *watcher.Watcher, event fsnotify.Event, ext *extfilter.Filter, formatter output.Formatter) {
 	if w.IsIgnored(event.Name) {
 		return
 	}
@@ -94,5 +102,7 @@ func handleEvent(w *watcher.Watcher, event fsnotify.Event, ext *extfilter.Filter
 		return
 	}
 
-	fmt.Printf("[%s] %-7s %s\n", time.Now().Format("2006-01-02 15:04:05"), event.Op, event.Name)
+	if err := formatter.Write(event, time.Now()); err != nil {
+		log.Printf("writing event: %v", err)
+	}
 }
