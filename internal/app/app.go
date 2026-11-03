@@ -37,12 +37,17 @@ func (r *Runner) HandleEvent(event fsnotify.Event, now time.Time) bool {
 	}
 
 	isDir := false
-	if event.Op&fsnotify.Create != 0 {
+	switch {
+	case event.Op&fsnotify.Create != 0:
 		if info, err := os.Stat(event.Name); err == nil && info.IsDir() {
 			isDir = true
 			if err := r.Watcher.AddRecursive(event.Name); err != nil {
 				log.Printf("watching new dir %s: %v", event.Name, err)
 			}
+		}
+	case event.Op&(fsnotify.Remove|fsnotify.Rename) != 0:
+		if err := r.Watcher.Remove(event.Name); err != nil {
+			log.Printf("unwatching removed dir %s: %v", event.Name, err)
 		}
 	}
 
